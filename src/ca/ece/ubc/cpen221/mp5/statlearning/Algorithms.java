@@ -1,6 +1,9 @@
 package ca.ece.ubc.cpen221.mp5.statlearning;
 
 import java.util.*;
+
+import org.json.simple.JSONObject;
+
 import ca.ece.ubc.cpen221.mp5.*;
 
 public class Algorithms {
@@ -33,7 +36,7 @@ public class Algorithms {
 
 			points.add(start);
 		}
-		
+
 		boolean flag = true;
 		Scanner sc = new Scanner(System.in);
 		do {
@@ -57,9 +60,9 @@ public class Algorithms {
 			for (int i = 0; i < points.size(); i++) {
 				double xmargin = Math.abs(prevPoints.get(i)[0] - points.get(i)[0]);
 				double ymargin = Math.abs(prevPoints.get(i)[1] - points.get(i)[1]);
-				if(xmargin < 0.0000000000001 && ymargin < 0.0000000000001) {
+				if (xmargin < 0.0000000000001 && ymargin < 0.0000000000001) {
 					flag = false;
-				}else {
+				} else {
 					flag = true;
 					break;
 				}
@@ -138,17 +141,89 @@ public class Algorithms {
 	}
 
 	public static String convertClustersToJSON(List<Set<Restaurant>> clusters) {
-		// TODO: Implement this method
-		return null;
+		StringBuilder restaurants = new StringBuilder();
+		for (Set<Restaurant> s : clusters) {
+			for (Restaurant r : s) {
+				JSONObject restaurant = r.toJSON();
+				restaurants.append(restaurant.toString());
+			}
+		}
+
+		String result = restaurants.toString();
+
+		return result;
 	}
 
 	public static MP5Function getPredictor(User u, RestaurantDB db, MP5Function featureFunction) {
-		// TODO: Implement this method
-		return null;
+		ArrayList<Double> coefficients = getRegressionCoefficients(u, db, featureFunction);
+		
+		PredictionFunction predictionFunction = new PredictionFunction(coefficients, featureFunction);
+		
+		return predictionFunction;
 	}
 
+	public static ArrayList<Double> getRegressionCoefficients(User u, RestaurantDB db, MP5Function featureFunction){
+		ArrayList<Double> xData = new ArrayList<Double>();
+		ArrayList<Double> yData = new ArrayList<Double>();
+		ArrayList<Double> result = new ArrayList<Double>();
+		double xSum = 0.0;
+		double ySum = 0.0;
+		double xMean;
+		double yMean;
+		double sxx = 0.0;
+		double syy = 0.0;
+		double sxy = 0.0;
+		double bVal;
+
+		for (Review review : db.getReviewsDB()) {
+			if (review.getUser_id().equals(u.getUser_id())) {
+				for (Restaurant restaurant : db.getRestaurantsDB()) {
+					if (restaurant.getBusiness_id().equals(review.getBusiness_id())) {
+						xSum += featureFunction.f(restaurant, db);
+						ySum += Double.parseDouble(review.getStarsString());
+						xData.add(featureFunction.f(restaurant, db));
+						yData.add(Double.parseDouble(review.getStarsString()));
+					}
+				}
+			}
+		}
+
+		xMean = xSum / xData.size();
+		yMean = ySum / xData.size();
+		
+		for(int i = 0 ; i < xData.size(); i++){
+			sxx += (xData.get(i) - xMean) * (xData.get(i) - xMean);
+			syy += (yData.get(i) - yMean) * (yData.get(i) - yMean);
+			sxy += (xData.get(i) - xMean) * (yData.get(i) - yMean);
+		}
+		
+		if(sxx > 0){
+			bVal = sxy / sxx;
+		}else{
+			bVal = 0;
+		}
+		
+		result.add((sxy * sxy) / (sxx * syy));
+		result.add(yMean - (bVal * xMean));
+		result.add(bVal);
+		
+		return result;
+	}
+	
 	public static MP5Function getBestPredictor(User u, RestaurantDB db, List<MP5Function> featureFunctionList) {
-		// TODO: Implement this method
-		return null;
+		int maxIndex = 0;
+		double current = 0.0;
+		double maxR_squared = 0.0;
+		
+		for(MP5Function f : featureFunctionList){
+			current = getRegressionCoefficients(u, db, f).get(0);
+			
+			if(current > maxR_squared){
+				maxR_squared = current;
+				maxIndex = featureFunctionList.indexOf(f);
+			}
+		}
+		
+		return featureFunctionList.get(maxIndex);
 	}
 }

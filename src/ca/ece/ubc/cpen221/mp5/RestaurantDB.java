@@ -25,6 +25,7 @@ public class RestaurantDB {
 	private ArrayList<User> usersDB;
 	private ArrayList<Restaurant> restaurantsDB;
 	private ArrayList<Review> reviewsDB;
+	private Map<String, Double> categories;
 
 	/**
 	 * Create a database from the Yelp dataset given the names of three files:
@@ -47,6 +48,16 @@ public class RestaurantDB {
 		this.restaurantsDB = readRestaurantsJson(restaurantJSONfilename);
 		this.usersDB = readUsersJSON(usersJSONfilename);
 		this.reviewsDB = readReviewsJSON(reviewsJSONfilename);
+		Double i = 0.0;
+		
+		for(Restaurant restaurant : restaurantsDB){
+			for (Object category : restaurant.getCategories()) {
+				if (!categories.containsKey(category.toString())) {
+					categories.put(category.toString(), i);
+					i++;
+				}
+			}
+		}
 	}
 
 	public Set<Restaurant> query(String queryString) {
@@ -280,6 +291,16 @@ public class RestaurantDB {
 
 	public ArrayList<Review> getReviewsDB() {
 		return reviewsDB;
+	}
+	
+	public ArrayList<Double> getCategories(Restaurant restaurant){
+		ArrayList<Double> categories = new ArrayList<Double>();
+		
+		for(Object category : restaurant.getCategories()){
+			categories.add(this.categories.get(category.toString()));
+		}
+		
+		return categories;
 	}
 
 }
